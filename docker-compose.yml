@@ -1,0 +1,114 @@
+services:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      SA_PASSWORD: "P@ssw0rd12345!"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./db:/db
+      - ./backups:/var/opt/mssql/backup
+    networks:
+      - adb_net
+    healthcheck:
+      # Modificación: Cambiamos /opt/mssql-tools18/bin/sqlcmd a /opt/mssql-tools17/bin/sqlcmd
+      # y aumentamos el tiempo de inicio a 120s.
+      test: >
+        /opt/mssql-tools17/bin/sqlcmd
+        -S localhost
+        -U sa
+        -P P@ssw0rd12345!
+        -Q "SELECT 1"
+        -C
+        || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 120s
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - adb_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: ./api
+    container_name: api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      JWT_SECRET: "change-this-secret-key-in-production"
+      DATABASE_HOST: "sqlserver"
+      DATABASE_PORT: "1433"
+      DATABASE_USER: "sa"
+      DATABASE_PASSWORD: "P@ssw0rd12345!"
+      DATABASE_NAME: "ticketsdb"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+    networks:
+      - adb_net
+    restart: unless-stopped
+
+  batch:
+    build: ./batch
+    container_name: batch
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_HOST: "sqlserver"
+      DATABASE_PORT: "1433"
+      DATABASE_USER: "sa"
+      DATABASE_PASSWORD: "P@ssw0rd12345!"
+      DATABASE_NAME: "ticketsdb"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+    networks:
+      - adb_net
+    restart: unless-stopped
+
+  frontend:
+    build: ../frontend
+    container_name: frontend
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    networks:
+      - adb_net
+    restart: unless-stopped
+
+networks:
+  adb_net:
+    driver: bridge
+
+volumes:
+  sqlserver_data:
+    driver: local
+  redis_data:
+    driver: local
