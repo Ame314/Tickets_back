@@ -16,20 +16,13 @@ services:
     networks:
       - adb_net
     healthcheck:
-      # Modificación: Cambiamos /opt/mssql-tools18/bin/sqlcmd a /opt/mssql-tools17/bin/sqlcmd
-      # y aumentamos el tiempo de inicio a 120s.
-      test: >
-        /opt/mssql-tools17/bin/sqlcmd
-        -S localhost
-        -U sa
-        -P P@ssw0rd12345!
-        -Q "SELECT 1"
-        -C
-        || exit 1
+      # Solución: Revisar los logs internos del SQL Server para la cadena de texto de "Recovery is complete",
+      # lo cual es más confiable que depender de la herramienta sqlcmd.
+      test: ["CMD-SHELL", "grep -q 'Recovery is complete' /var/opt/mssql/log/errorlog || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 15
-      start_period: 120s
+      retries: 20
+      start_period: 45s # Se reduce, ya que sabemos que el inicio es rápido.
 
   redis:
     image: redis:7-alpine
@@ -98,7 +91,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:8000"
+      # Nota: Si el frontend se ejecuta en tu máquina local, localhost:8000 es correcto.
+      # Si se ejecuta dentro de un contenedor en la misma red Docker, debe ser el nombre del servicio, p. ej., http://api:8000
+      NEXT_PUBLIC_API_URL: "http://localhost:8000" 
     networks:
       - adb_net
     restart: unless-stopped
