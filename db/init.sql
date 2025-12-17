@@ -1,4 +1,10 @@
--- Crear base de datos
+IF DB_ID('soporte') IS NOT NULL
+BEGIN
+    PRINT 'Base de datos "soporte" ya existe. Saltando init.sql';
+    RETURN;
+END
+GO
+
 CREATE DATABASE soporte;
 GO
 USE soporte;

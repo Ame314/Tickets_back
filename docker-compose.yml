@@ -56,7 +56,7 @@ services:
       DATABASE_PORT: "1433"
       DATABASE_USER: "sa"
       DATABASE_PASSWORD: "P@ssw0rd12345!"
-      DATABASE_NAME: "ticketsdb"
+      DATABASE_NAME: "soporte"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
     networks:
@@ -76,7 +76,7 @@ services:
       DATABASE_PORT: "1433"
       DATABASE_USER: "sa"
       DATABASE_PASSWORD: "P@ssw0rd12345!"
-      DATABASE_NAME: "ticketsdb"
+      DATABASE_NAME: "soporte"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
     networks:
@@ -84,7 +84,9 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: ../frontend
+    build:
+      context: ../Tickets_ame
+      dockerfile: Dockerfile
     container_name: frontend
     depends_on:
       - api
@@ -93,10 +95,23 @@ services:
     environment:
       # Nota: Si el frontend se ejecuta en tu máquina local, localhost:8000 es correcto.
       # Si se ejecuta dentro de un contenedor en la misma red Docker, debe ser el nombre del servicio, p. ej., http://api:8000
-      NEXT_PUBLIC_API_URL: "http://localhost:8000" 
+      NEXT_PUBLIC_API_URL: "http://api:8000"
     networks:
       - adb_net
     restart: unless-stopped
+
+  db-init:
+    image: mcr.microsoft.com/mssql-tools
+    container_name: db-init
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    volumes:
+      - ./db:/db
+    entrypoint: ["/bin/sh", "-c", "/opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P \"P@ssw0rd12345!\" -i /db/init.sql"]
+    networks:
+      - adb_net
+    restart: "no"
 
 networks:
   adb_net:

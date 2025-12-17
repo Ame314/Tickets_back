@@ -1,15 +1,21 @@
+import os
 import time
 import redis
 import pyodbc
 
-r = redis.Redis(host="redis", port=6379, decode_responses=True)
+r = redis.Redis(
+    host=os.getenv("REDIS_HOST", "redis"),
+    port=int(os.getenv("REDIS_PORT", "6379")),
+    decode_responses=True,
+)
 
 conn_str = (
     "DRIVER={ODBC Driver 18 for SQL Server};"
-    "SERVER=sqlserver;"
-    "DATABASE=soporte;"
-    "UID=batch_user;"
-    "PWD=Batch123!;"
+    f"SERVER={os.getenv('DATABASE_HOST', 'sqlserver')},{os.getenv('DATABASE_PORT', '1433')};"
+    f"DATABASE={os.getenv('DATABASE_NAME', 'soporte')};"
+    f"UID={os.getenv('DATABASE_USER', 'sa')};"
+    f"PWD={os.getenv('DATABASE_PASSWORD', 'P@ssw0rd12345!')};"
+    "Encrypt=yes;"
     "TrustServerCertificate=yes;"
 )
 

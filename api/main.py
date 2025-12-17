@@ -27,12 +27,18 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 horas
 
 # Database Connection
+DB_HOST = os.getenv("DATABASE_HOST", "sqlserver")
+DB_PORT = os.getenv("DATABASE_PORT", "1433")
+DB_NAME = os.getenv("DATABASE_NAME", "soporte")
+DB_USER = os.getenv("DATABASE_USER", "sa")
+DB_PASSWORD = os.getenv("DATABASE_PASSWORD", "P@ssw0rd12345!")
+
 conn_str = (
     "DRIVER={ODBC Driver 18 for SQL Server};"
-    "SERVER=sqlserver;"
-    "DATABASE=soporte;"
-    "UID=api_user;"
-    "PWD=ApiUser#2025;"
+    f"SERVER={DB_HOST},{DB_PORT};"
+    f"DATABASE={DB_NAME};"
+    f"UID={DB_USER};"
+    f"PWD={DB_PASSWORD};"
     "Encrypt=yes;"
     "TrustServerCertificate=yes;"
 )
@@ -484,8 +490,14 @@ def actualizar_ticket(
         params.append(ticket_update.prioridad.value)
     
     if ticket_update.estado is not None:
+        # Solo administradores pueden marcar como resuelto o cerrado
+        if (ticket_update.estado in [EstadoTicket.resuelto, EstadoTicket.cerrado]
+                and current_user["rol"] != "admin"):
+            raise HTTPException(status_code=403, detail="Solo administradores pueden resolver o cerrar tickets")
+
         updates.append("estado = ?")
         params.append(ticket_update.estado.value)
+
         if ticket_update.estado in [EstadoTicket.cerrado, EstadoTicket.resuelto]:
             updates.append("cerrado_en = SYSDATETIME()")
     
@@ -507,6 +519,17 @@ def actualizar_ticket(
     query = f"UPDATE Tickets SET {', '.join(updates)} WHERE ticket_id = ?"
     cursor.execute(query, params)
     conn.commit()
+    
+    # Si se marcó como resuelto/cerrado por un admin, registrar interacción de sistema
+    if ticket_update.estado in [EstadoTicket.resuelto, EstadoTicket.cerrado] and current_user["rol"] == "admin":
+        cursor.execute(
+            """INSERT INTO Interacciones (ticket_id, usuario_id, mensaje, es_interno)
+               VALUES (?, ?, ?, 0)""",
+            ticket_id,
+            current_user["usuario_id"],
+            f"Ticket {ticket_update.estado.value.replace('_', ' ')} por {current_user['nombre']}"
+        )
+        conn.commit()
     
     # Invalidar caché
     r.delete(f"ticket:{ticket_id}")
