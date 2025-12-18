@@ -85,7 +85,7 @@ services:
 
   frontend:
     build:
-      context: ../Tickets_ame
+      context: ../frontend
       dockerfile: Dockerfile
     container_name: frontend
     depends_on:

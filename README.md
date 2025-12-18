@@ -61,8 +61,9 @@ Sistema completo de gestión de tickets con autenticación, panel de administrac
 ### 1. Clonar el proyecto
 
 ```bash
-git clone <tu-repositorio>
-cd adb_practica
+git https://github.com/Ame314/Tickets_ame
+git https://github.com/Ame314/Tickets_back
+mkdir
 ```
 
 ### 2. Crear estructura de directorios
