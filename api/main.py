@@ -49,7 +49,7 @@ r = redis.Redis(host="redis", port=6379, decode_responses=True)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["tickets-frontend.gentledune-4dca624b.eastus.azurecontainerapps.io", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
