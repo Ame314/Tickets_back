@@ -85,7 +85,9 @@ services:
 
   frontend:
     build:
-      context: ../frontend
+      # Se usa la ruta real del proyecto frontend (`Tickets_ame`) en vez de `../frontend`
+      # para evitar errores de contexto faltante en cualquier entorno.
+      context: ../Tickets_ame
       dockerfile: Dockerfile
     container_name: frontend
     depends_on:
